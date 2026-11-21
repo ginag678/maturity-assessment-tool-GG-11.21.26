@@ -1,0 +1,1309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US Retail Bank Maturity</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --font: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --bg: #f4f6f9;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --text: #0f172a;
+    --muted: #5b6474;
+    --border: #e3e8ef;
+    --border-strong: #cfd7e3;
+    --accent: #1d4ed8;
+    --accent-strong: #1e3a8a;
+    --accent-soft: rgba(29, 78, 216, 0.16);
+    --accent-tint: #eef3ff;
+    --on-accent: #ffffff;
+    --hero-from: #0b1f3a;
+    --hero-to: #17365f;
+    --hero-text: #ffffff;
+    --hero-muted: #b9c6da;
+    --success: #15803d;
+    --warn-bg: #fff8eb;
+    --warn-border: #f3d38c;
+    --warn-text: #7a4b00;
+    --error: #b42318;
+    --error-bg: #fef3f2;
+    --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.07);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b111b;
+      --surface: #121a26;
+      --surface-2: #172131;
+      --text: #e7ecf3;
+      --muted: #97a3b6;
+      --border: #243044;
+      --border-strong: #33425a;
+      --accent: #6ea0ff;
+      --accent-strong: #a9c5ff;
+      --accent-soft: rgba(110, 160, 255, 0.22);
+      --accent-tint: #172640;
+      --on-accent: #0b111b;
+      --hero-from: #0a1626;
+      --hero-to: #13294a;
+      --hero-muted: #9fb0c9;
+      --success: #4ade80;
+      --warn-bg: #2a2012;
+      --warn-border: #5c4518;
+      --warn-text: #f2c97d;
+      --error: #f97066;
+      --error-bg: #2d1615;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: 120px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15.5px/1.55 var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { line-height: 1.25; margin: 0; }
+  p { margin: 0 0 10px; }
+  .container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+  .muted { color: var(--muted); }
+  .eyebrow {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---------- Header ---------- */
+  .hero {
+    background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
+    color: var(--hero-text);
+    padding: 44px 0 40px;
+  }
+  .hero .eyebrow { color: var(--hero-muted); }
+  .hero h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; margin: 8px 0 12px; letter-spacing: -0.01em; }
+  .hero .lead { color: var(--hero-muted); max-width: 680px; font-size: 1.02rem; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .meta span {
+    border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 999px;
+    padding: 4px 12px; font-size: 0.85rem; color: var(--hero-text);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  /* ---------- Sticky progress ---------- */
+  .progress-nav {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .progress-nav .container { padding-top: 10px; padding-bottom: 10px; }
+  .progress-row { display: flex; align-items: center; gap: 12px; }
+  .progress-track { flex: 1; height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width 0.25s ease; }
+  #progress { font-size: 0.85rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .pills::-webkit-scrollbar { display: none; }
+  .pill {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; color: var(--muted); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+    background: var(--surface);
+  }
+  .pill:hover { border-color: var(--border-strong); color: var(--text); }
+  .pill .pill-count { font-variant-numeric: tabular-nums; }
+  .pill.complete { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, var(--border)); }
+  .pill.complete .pill-count::before { content: "✓ "; }
+
+  main { padding: 28px 0 40px; }
+
+  /* ---------- Generic blocks ---------- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px;
+  }
+  .banner {
+    background: var(--warn-bg); color: var(--warn-text);
+    border: 1px solid var(--warn-border); border-radius: 10px;
+    padding: 12px 14px; font-size: 0.93rem; margin: 12px 0;
+  }
+  .banner.error { background: var(--error-bg); color: var(--error); border-color: var(--error); }
+  button {
+    font: inherit; font-weight: 600; border-radius: 10px; padding: 10px 18px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
+    transition: filter 0.15s ease, background 0.15s ease;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+  button.secondary { background: var(--surface); color: var(--accent); border-color: var(--border-strong); }
+  button.secondary:hover { background: var(--accent-tint); filter: none; }
+
+  /* ---------- Questions ---------- */
+  .dimension { margin-bottom: 36px; }
+  .dim-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+  .dim-num {
+    flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px;
+    display: grid; place-items: center; font-weight: 700; font-size: 0.95rem;
+    background: var(--accent-tint); color: var(--accent-strong);
+  }
+  .dim-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .dim-title h2 { font-size: 1.3rem; }
+  .dim-count { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .dimension-desc { color: var(--muted); margin: 6px 0 0; max-width: 760px; }
+
+  fieldset.question {
+    margin: 0 0 14px; padding: 20px 22px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    min-width: 0;
+  }
+  fieldset.question.missing { border-color: var(--error); box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 18%, transparent); }
+  fieldset.question legend {
+    float: left; width: 100%; padding: 0; margin-bottom: 6px;
+    font-weight: 600; font-size: 1.02rem;
+  }
+  .q-num { display: block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 4px; }
+  .evidence {
+    clear: both; font-size: 0.86rem; color: var(--muted);
+    margin: 0 0 12px; padding-left: 10px; border-left: 2px solid var(--border-strong);
+  }
+  .evidence strong { color: var(--text); font-weight: 600; }
+  .options { clear: both; display: grid; gap: 8px; }
+  .option {
+    display: flex; gap: 12px; align-items: flex-start; cursor: pointer;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface-2);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .option:hover { border-color: var(--border-strong); }
+  .option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .opt-badge {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 0.8rem; font-weight: 700;
+    border: 1px solid var(--border-strong); color: var(--muted); background: var(--surface);
+  }
+  .opt-text { padding-top: 2px; }
+  .option:has(input:checked) { border-color: var(--accent); background: var(--accent-tint); }
+  .option:has(input:checked) .opt-badge { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .option:has(input:focus-visible) { outline: 3px solid var(--accent-soft); outline-offset: 1px; }
+
+  .submit-bar {
+    position: sticky; bottom: 0; z-index: 5;
+    margin-top: 8px; padding: 14px 0;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end;
+  }
+  #submit-error { color: var(--error); font-weight: 600; margin-right: auto; }
+
+  /* ---------- Results ---------- */
+  #results { scroll-margin-top: 120px; }
+  .results-head {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between;
+    margin: 12px 0 16px;
+  }
+  .results-head h2 { font-size: 1.6rem; margin-top: 4px; }
+  .results-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .profile-hero { border-left: 4px solid var(--accent); margin-bottom: 16px; }
+  .profile-name { font-size: 1.7rem; font-weight: 700; color: var(--accent-strong); margin: 4px 0 6px; letter-spacing: -0.01em; }
+  .profile-reason { font-size: 0.9rem; color: var(--muted); }
+  .profile-meaning { font-size: 1.02rem; max-width: 760px; }
+  .next-action {
+    background: var(--accent-tint); border-radius: 10px; padding: 14px 16px; margin: 14px 0 4px;
+  }
+  .next-action .eyebrow { color: var(--accent-strong); margin-bottom: 4px; }
+  .next-action p { margin: 0; font-weight: 500; }
+  .even-note {
+    background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 10px; padding: 12px 14px; margin: 10px 0 12px;
+  }
+  .even-note .eyebrow { color: var(--accent-strong); margin-bottom: 4px; }
+  .even-note p { margin: 0; }
+  .even-also { margin: 12px 0 0; font-size: 0.9rem; }
+  .lowest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 0; }
+  .lowest .eyebrow { margin-right: 4px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem;
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+    background: var(--surface-2); color: var(--text);
+  }
+  .chip b { font-variant-numeric: tabular-nums; }
+  .also { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 14px; }
+  .also-item { padding: 10px 0; border-bottom: 1px dashed var(--border); }
+  .also-item:last-child { border-bottom: 0; }
+  .also-item h4 { margin: 0 0 4px; font-size: 1rem; }
+  .also-item p { margin: 0 0 4px; font-size: 0.93rem; }
+  .tag {
+    display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent-strong); margin-left: 8px; vertical-align: middle;
+  }
+
+  .results-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .card h3 { font-size: 1.05rem; margin-bottom: 14px; }
+  .chart-wrap { position: relative; max-width: 440px; margin: 0 auto; }
+  .score-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .score-row:last-child { border-bottom: 0; }
+  .score-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .score-name { font-weight: 600; font-size: 0.93rem; }
+  .score-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .score-val small { color: var(--muted); font-weight: 400; }
+  .bar { position: relative; height: 8px; border-radius: 999px; background: var(--border); margin: 8px 0 6px; overflow: hidden; }
+  .bar span { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 999px; }
+  .score-stage { font-size: 0.8rem; color: var(--muted); }
+
+  .stage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .stage-block { border: 1px solid var(--border); border-radius: 10px; padding: 16px; background: var(--surface-2); }
+  .stage-block h4 { margin: 0 0 4px; font-size: 0.98rem; }
+  .stage-block .chip { margin-bottom: 10px; background: var(--accent-tint); border-color: transparent; color: var(--accent-strong); font-weight: 600; }
+  .stage-block p { font-size: 0.92rem; }
+  .stage-next { font-size: 0.86rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 10px; margin: 10px 0 0; }
+  .stage-next b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Footer & test panel ---------- */
+  .credits { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.88rem; }
+  .credits h2 { font-size: 0.95rem; color: var(--text); margin-bottom: 6px; }
+  .credits ul { margin: 6px 0 0; padding-left: 18px; }
+  #test-panel { border-style: dashed; margin-bottom: 20px; }
+  #test-panel button { margin: 4px 6px 4px 0; padding: 6px 12px; font-size: 0.85rem; }
+  #test-log { font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; white-space: pre-wrap; margin-top: 8px; }
+  [hidden] { display: none !important; }
+
+  @media (max-width: 760px) {
+    .results-grid { grid-template-columns: 1fr; }
+    .pills { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .card, fieldset.question { padding: 16px; }
+    .hero { padding: 32px 0 28px; }
+    .profile-name { font-size: 1.45rem; }
+  }
+  @media print {
+    .hero, .progress-nav, #assessment, .results-actions, #test-panel { display: none !important; }
+    body { background: #fff; }
+    .card { box-shadow: none; break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="container">
+    <div class="eyebrow">ISM 6346 · Digital Transformation</div>
+    <h1>Digital Maturity Self-Assessment for US Retail Banks</h1>
+    <p class="lead">Answer every question for how your bank operates today, not what is planned. Each answer maps to one of five stages: Initial, Developing, Defined, Managed and Optimizing. Your answers are averaged into one score per dimension, and results appear after all questions are answered. If an option is only partly true for your bank, choose the one below it.</p>
+    <div class="meta" id="meta"></div>
+  </div>
+</header>
+
+<nav class="progress-nav" aria-label="Assessment progress">
+  <div class="container">
+    <div class="progress-row">
+      <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="progress" aria-live="polite"></span>
+    </div>
+    <div class="pills" id="pills"></div>
+  </div>
+</nav>
+
+<main class="container">
+  <div id="config-errors" class="banner error" hidden></div>
+
+  <section id="test-panel" class="card" hidden>
+    <h3>Test personas (developer only, shown with #test in the URL)</h3>
+    <div id="test-buttons"></div>
+    <button type="button" class="secondary" id="run-checks">Run all persona checks</button>
+    <div id="test-log"></div>
+  </section>
+
+  <form id="assessment" novalidate>
+    <div id="questions"></div>
+    <div class="submit-bar">
+      <span id="submit-error" role="alert"></span>
+      <button type="submit">See results →</button>
+    </div>
+  </form>
+
+  <section id="results" hidden>
+    <div class="results-head">
+      <div>
+        <div class="eyebrow">Assessment results</div>
+        <h2>Your bank’s maturity profile</h2>
+      </div>
+      <div class="results-actions">
+        <button type="button" class="secondary" id="edit-answers">Change answers</button>
+        <button type="button" class="secondary" id="print-results">Print / save as PDF</button>
+      </div>
+    </div>
+
+    <div class="card profile-hero" id="profile-card"></div>
+
+    <div class="results-grid">
+      <div class="card">
+        <h3>Maturity by dimension</h3>
+        <div class="chart-wrap"><canvas id="radar" aria-label="Radar chart of dimension scores" role="img"></canvas></div>
+        <p id="chart-unavailable" class="banner" hidden>The radar chart could not load because the charting library (Chart.js) needs an internet connection. Your scores and profile are complete; reconnect and submit again to see the chart.</p>
+      </div>
+      <div class="card">
+        <h3>Scores (1 to 5)</h3>
+        <div id="score-rows"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>What your stage looks like on each dimension</h3>
+      <div class="stage-grid" id="stage-card"></div>
+    </div>
+  </section>
+
+  <footer class="credits">
+    <h2>About this tool</h2>
+    <p>Built by our team for ISM 6346 Digital Transformation, Week 5 group activity.</p>
+    <ul>
+      <li>Gina Green, Member A, Framework Designer: maturity framework, stage descriptions and Interpretation Guide</li>
+      <li>Prakash Panda, Member B, Question Author: diagnostic questions and Question Design Rationale</li>
+      <li>Henry Pinzon, Member C, Tool Builder: this self-assessment tool</li>
+    </ul>
+  </footer>
+</main>
+
+<script>
+/* =====================================================================
+   FRAMEWORK DATA (owned by Member A)
+   Source: "Digital Maturity Framework for US Retail Banks"
+   (Gina Green, Framework Designer, November 17, 2026).
+   ===================================================================== */
+const DIMENSIONS = [
+  "Customer Data Foundation",
+  "Digital Banking Channels",
+  "Risk, Compliance & Operations Automation",
+  "AI-Driven Decisioning",
+  "Workforce & Change Capacity"
+];
+
+const DIMENSION_DESCRIPTIONS = {
+  "Customer Data Foundation": "Almost everything a bank wants to do with digital channels or AI depends on knowing who the customer is across products. At many banks, someone with a checking account, a car loan and a credit card still shows up as three separate customers because each product runs on its own system.",
+  "Digital Banking Channels": "Nearly every bank has an app, so this dimension asks something harder: can a customer open and manage products without coming into a branch, and does the bank measure how well that works?",
+  "Risk, Compliance & Operations Automation": "KYC, loan processing and AML monitoring are high-volume, rules-heavy work, and they carry much of a bank’s operating cost and regulatory risk. That makes them strong candidates for automation, as long as the process is cleaned up first. Automating a broken process just makes the same mistakes faster.",
+  "AI-Driven Decisioning": "This dimension looks at whether models actually make or shape live credit, fraud and marketing decisions, and how well the bank governs them. A bank that only uses vendor scores as delivered sits low here even if those scores are good, because it isn’t validating or monitoring the models it depends on.",
+  "Workforce & Change Capacity": "New technology stalls when the people expected to use it aren’t ready. This dimension covers analytics talent and how the bank gets new tools adopted. Middle managers carry a lot of weight here, since they decide whether their teams actually change how they work."
+};
+
+const STAGE_NAMES = ["Initial", "Developing", "Defined", "Managed", "Optimizing"];
+
+// Five descriptions per dimension, Stage 1 first.
+const STAGE_DESCRIPTIONS = {
+  "Customer Data Foundation": [
+    "Deposits, loans and cards each keep their own customer record, with nothing tying them together. If an analyst needs data, they ask IT for an export and wait. Nobody owns data quality, so problems usually come to light when a customer calls to complain.",
+    "Products on the core share a customer file. Card and loan platforms outside the core get matched by hand when someone needs the full relationship. Analysts see new data after the month-end load, and errors are fixed as people report them.",
+    "A single customer ID links every product in a data warehouse that loads at least weekly and feeds standard reporting. Quality is checked through periodic audits. New extracts go through a set request process and take one to four weeks.",
+    "Business teams query the linked data on their own, and it’s current as of the prior business day. Named data owners get monthly quality metrics, like duplicate customers and incomplete fields. A new data request takes less than a week.",
+    "The customer record updates within the hour and is available through APIs to digital channels and production models. Quality targets are part of the data owners’ performance goals. Analysts can pull governed data from a self-service catalog the same day they need it."
+  ],
+  "Digital Banking Channels": [
+    "The app and website handle balances and transfers, and that’s about it. Every new account is opened in a branch or over the phone, and so are routine requests like disputing a charge or updating an address. Nobody tracks digital account opening because there isn’t any.",
+    "One deposit product can be opened online, and the app handles one service task without a phone call. The bank counts finished applications. Fewer than 10% of new accounts are opened digitally.",
+    "Several deposit products can be opened online, and two or three common service tasks work in the app. The completion rate (applications started versus finished) is reported at least monthly. Digital openings make up 10% to 24% of new accounts.",
+    "Every consumer deposit product can be opened online, and 25% to 49% of new accounts are. The bank can see where applicants drop off at each step and has changed at least one step in the past year based on that data.",
+    "Customers can open any deposit product and at least one loan or card product on their own. Half or more of new accounts are opened digitally. The application flow is A/B tested continuously, and the results are reviewed in a standing product meeting."
+  ],
+  "Risk, Compliance & Operations Automation": [
+    "Loan files and KYC documents move between people on paper or as PDF attachments. Borrowers’ financial statements are typed into spreadsheets by hand. AML alerts are worked off printed or exported reports, and management doesn’t get regular operations metrics.",
+    "Loans and AML cases are tracked in workflow software, but staff still re-key data from one system to another and gather customer records by hand. Management gets monthly volume counts, without turnaround times or error rates.",
+    "Documents come in digitally and data moves between systems without re-keying, though staff still check extracted figures line by line. AML case management fills in customer and transaction data on its own. Volumes and turnaround times go into a monthly report.",
+    "Software extracts financial statements, and staff only review what it flags. AML alerts are risk-scored so investigators work the highest-risk ones first. Monthly reporting shows error and exception rates for each step in the process.",
+    "Standard consumer loans are decided straight through, with people handling only exceptions, and the exception rate has come down over the past year. AML false-positive rates and investigation times are reported monthly and used to tune rules at least once a quarter. Key processes have cost-per-transaction targets, and extraction accuracy is tracked."
+  ],
+  "AI-Driven Decisioning": [
+    "Credit, fraud and marketing decisions run on fixed rules or a person’s judgment. There’s no model inventory and no policy on AI use. No one checks whether a decision tool is improving results.",
+    "The bank uses vendor scores, like bureau credit scores or card-network fraud scores, as they come. There is a written AI policy and a list of models, but nothing has been independently validated. Generative AI use is limited to individual pilots.",
+    "One or two models that the bank governs itself are used in live decisions. Each has a named owner and was independently validated before launch. A defined group of employees can use an approved generative AI tool, and model results are compared against a baseline after launch.",
+    "Three to nine bank-governed models inform live decisions and are revalidated on a set schedule. At least one generative AI use case runs in a live process with a measured outcome. Model results show up in a recurring management report.",
+    "Ten or more models cover at least two of credit, fraud and marketing, and automated monitoring alerts the owners when performance drifts. Generative AI use cases are inventoried and their output quality is monitored. AI results go to the board at least once a year."
+  ],
+  "Workforce & Change Capacity": [
+    "There are no dedicated analytics roles. Reports come from whoever knows the spreadsheets best. New tools launch without a training plan, and nobody follows up on whether staff use them.",
+    "A few analysts work inside individual departments, each doing things their own way. Training on new tools is optional. Adoption is judged by license counts or anecdotes.",
+    "A named analytics team serves the whole bank. Frontline staff have to complete training before a new tool goes live, and usage is tracked for the first few weeks after launch. Data or AI training is available and tracked, but fewer than a quarter of employees took it last year.",
+    "Analysts are embedded in the business lines and follow standards set by the central team. Managers are trained before their teams, and weekly active use of new tools is reported back to them on an ongoing basis. Between a quarter and three-quarters of employees completed data or AI training last year.",
+    "Analytics roles have published career paths with clear promotion criteria. Managers are trained first, each team has a named champion before launch, and adoption targets are written into managers’ goals, which leadership reviews every quarter. At least 75% of employees completed data or AI training in the past year."
+  ]
+};
+
+/* ---------------------------------------------------------------------
+   INTERPRETATION GUIDE (owned by Member A)
+   Source: "Interpretation Guide - Tool Format (for Member C)" / profiles.js,
+   reduced on November 20, 2026 to five profiles, one per dimension, to meet
+   slides 96 and 104. Removed: Digital Leader, Getting Started, Running on Rules.
+   Digitized but Not Deciding now also covers AI as the lowest dimension, so its
+   meaning was widened, and Branch-Bound and Manual Back Office meanings were
+   lengthened to two sentences. Approved by Member A (Gina Green) on November 20,
+   2026; matches the one-page Interpretation Guide attached to the Question
+   Design Rationale. All other text is unchanged.
+   --------------------------------------------------------------------- */
+// Interpretation Guide profiles, in the tool's data format.
+// Profiles with a rule are checked in the order listed; the first match is the primary profile.
+// If no rule matches, use the profile whose fallbackFor is the lowest dimension
+// (ties broken by PRIORITY order; the other tied profiles are shown as also applying).
+//
+// Rule types:
+//   allAtLeast     every dimension score >= value
+//   allAtMost      every dimension score <= value
+//   belowAllOthers score of `dimension` is at least `gap` below every other dimension
+//   highAndLow     score of `high` >= highMin AND score of `low` <= lowMax
+
+const PROFILES = [
+  { name: "Siloed Ledger",
+    rule: { type: "belowAllOthers", dimension: "Customer Data Foundation", gap: 1.0 },
+    fallbackFor: "Customer Data Foundation",
+    meaning: "The bank has invested in channels, operations or models, but the data underneath is still split by product system. Offers can't use the full relationship, and any model is trained on a partial picture of the customer.",
+    nextAction: "Link deposit, loan and card records under one customer ID, then make that view available to the channels and models already in place." },
+
+  { name: "Tools Without Takers",
+    rule: { type: "belowAllOthers", dimension: "Workforce & Change Capacity", gap: 1.0 },
+    fallbackFor: "Workforce & Change Capacity",
+    meaning: "The bank has built or bought more than its people use. Systems go live, staff keep their old workarounds, and managers have little reason to push adoption, so more technology spending won't help.",
+    nextAction: "For the next rollout, train managers before their teams and put a weekly active-use target in each manager's goals." },
+
+  { name: "Digitized but Not Deciding",
+    rule: { type: "highAndLow", high: "Digital Banking Channels", highMin: 3.5, low: "AI-Driven Decisioning", lowMax: 2.5 },
+    fallbackFor: "AI-Driven Decisioning",
+    meaning: "The bank collects more customer data than it uses, and credit, fraud and offer decisions still run on fixed rules and vendor scores. Other areas are further along than decision-making, so the bank has changed how customers reach it without changing how it decides.",
+    nextAction: "Put one bank-governed model into live use where digital data gives an edge, such as fraud screening on online account opening, with a named owner, independent validation and a baseline to measure against." },
+
+  // Profiles reached only when their dimension is the lowest (no rule)
+  { name: "Branch-Bound",
+    rule: null,
+    fallbackFor: "Digital Banking Channels",
+    meaning: "The back office is ahead of what customers can do without calling or coming in. Opening an account or fixing a routine problem still takes a branch visit or a phone call, so customers who expect to do it on their phone go elsewhere.",
+    nextAction: "Launch end-to-end online opening for the highest-volume deposit product and track completion at each step." },
+
+  { name: "Manual Back Office",
+    rule: null,
+    fallbackFor: "Risk, Compliance & Operations Automation",
+    meaning: "Growth up front is held back by manual KYC, loan and AML work behind it. Every new customer adds paperwork, so higher volume raises cost and regulatory risk instead of spreading it.",
+    nextAction: "Map one loan process from intake to decision, cut the steps that add nothing, then automate document intake." }
+];
+
+// Tie-break order for the fallback (unchanged from the current tool).
+const PRIORITY = [
+  "Customer Data Foundation", "Workforce & Change Capacity",
+  "AI-Driven Decisioning", "Digital Banking Channels",
+  "Risk, Compliance & Operations Automation"
+];
+
+// Imbalance flag: shown when highest minus lowest score is 1.5 or more.
+const IMBALANCE_GAP = 1.5;
+const imbalanceMessage = strongest =>
+  `Your strength is concentrated in ${strongest}. Check that it's where the bank actually intends to compete. A bank can pour money into one area, such as compliance, and end up with a high score that doesn't set it apart from anyone, while the dimensions customers would notice stay where they were.`;
+
+// Not set in profiles.js: dimensions count as tied for lowest only when exactly equal.
+const TIE_TOLERANCE = 0;
+
+// Even scores: when every dimension is within this spread, no single weakness stands out.
+// The tool still shows the tie-break profile, but labels it as the next area to strengthen
+// so a strong, even bank isn't described as having a gap (slide 102). The 0.5 threshold
+// was approved by Member A on November 20, 2026.
+const EVEN_SPREAD = 0.5;
+
+/* =====================================================================
+   QUESTION DATA (owned by Member B)
+   Member B, Question Author: Prakash Panda. Final set, November 19, 2026.
+   Question 4 option 3 changed to "One to four weeks" on November 20, 2026
+   (approved by Member B) so every wait time has exactly one answer.
+   Rubric version: November 2026 (re-check question 15 first at each refresh).
+   20 questions, 4 per dimension. Each option's value is the explicit
+   1 to 5 score; options are ordered and cumulative. If an option is only
+   partly true for the bank, the respondent chooses the one below it.
+   `evidence` tells the respondent what to check, so two assessors of the
+   same bank land on the same answer.
+   ===================================================================== */
+const QUESTIONS = [
+  // ---------- Customer Data Foundation ----------
+  { id: "d1", dimension: "Customer Data Foundation",
+    text: "How are one customer's accounts across each product the bank offers connected in your systems today?",
+    evidence: "Data architecture diagram, or a demo of pulling one customer's full relationship.",
+    options: [
+      { value: 1, label: "They are not connected; each product system keeps its own customer record" },
+      { value: 2, label: "Products on the core system share a customer file; products on other platforms are matched by hand when needed" },
+      { value: 3, label: "A shared customer ID links every product in a data warehouse used for reporting" },
+      { value: 4, label: "As in the previous option, and business teams query the linked data themselves without IT help" },
+      { value: 5, label: "As in the previous option, and the linked customer record is served to digital channels and production models through an API" }
+    ] },
+  { id: "d2", dimension: "Customer Data Foundation",
+    text: "When a customer opens a new account, when does it first appear in the data that marketing and risk analysts use?",
+    evidence: "Data pipeline or warehouse load schedule.",
+    options: [
+      { value: 1, label: "Only when someone exports it by hand" },
+      { value: 2, label: "After the next month-end load" },
+      { value: 3, label: "Within a week" },
+      { value: 4, label: "The next business day" },
+      { value: 5, label: "Within an hour" }
+    ] },
+  { id: "d3", dimension: "Customer Data Foundation",
+    text: "How is customer data quality measured and reported?",
+    evidence: "The most recent data quality report and who receives it.",
+    options: [
+      { value: 1, label: "No one is responsible for data quality" },
+      { value: 2, label: "Someone fixes errors as they are reported, but no metrics are kept" },
+      { value: 3, label: "Quality is checked during periodic audits or projects" },
+      { value: 4, label: "Defined metrics (such as duplicate customer rate and field completeness) are reported at least monthly to named data owners" },
+      { value: 5, label: "As in the previous option, and the metrics have targets written into the owners' performance goals" }
+    ] },
+  { id: "d4", dimension: "Customer Data Foundation",
+    text: "How long does it typically take an analyst to get a new customer data extract approved and delivered?",
+    evidence: "Data request tickets from the last quarter.",
+    options: [
+      { value: 1, label: "More than two months" },
+      { value: 2, label: "One to two months" },
+      { value: 3, label: "One to four weeks" },
+      { value: 4, label: "Less than a week, through a standard request process" },
+      { value: 5, label: "Same day, self-service from a governed data catalog" }
+    ] },
+
+  // ---------- Digital Banking Channels ----------
+  { id: "c1", dimension: "Digital Banking Channels",
+    text: "How many consumer deposit products (checking, savings, CDs) can a new customer open start to finish without visiting a branch or calling?",
+    evidence: "Try opening each product on the public website or app.",
+    options: [
+      { value: 1, label: "None; the app and website show balances and transfers only" },
+      { value: 2, label: "One product" },
+      { value: 3, label: "More than one, but not all" },
+      { value: 4, label: "All of them" },
+      { value: 5, label: "All of them, plus at least one loan or card product" }
+    ] },
+  { id: "c2", dimension: "Digital Banking Channels",
+    text: "What share of new consumer deposit accounts in the last 12 months were opened digitally? If the bank does not track this, choose the first option.",
+    evidence: "Account origination report by channel.",
+    options: [
+      { value: 1, label: "Not tracked, or no accounts can be opened digitally" },
+      { value: 2, label: "Less than 10%" },
+      { value: 3, label: "10% to 24%" },
+      { value: 4, label: "25% to 49%" },
+      { value: 5, label: "50% or more" }
+    ] },
+  { id: "c3", dimension: "Digital Banking Channels",
+    text: "What does the bank measure about people who start a digital account application?",
+    evidence: "The application funnel report and the date of the last change made because of it.",
+    options: [
+      { value: 1, label: "Nothing, or there is no digital application" },
+      { value: 2, label: "The number of completed applications only" },
+      { value: 3, label: "The completion rate (started vs. finished), reported at least monthly" },
+      { value: 4, label: "Drop-off at each step, and at least one step was redesigned in the last 12 months because of it" },
+      { value: 5, label: "As in the previous option, and application steps are A/B tested on an ongoing basis, with results reviewed in a recurring product meeting" }
+    ] },
+  { id: "c4", dimension: "Digital Banking Channels",
+    text: "How many of these can a customer complete in the mobile app without calling or visiting: dispute a card transaction, change their address, lock or unlock a debit card, order a replacement card, add an external account for transfers?",
+    evidence: "Check each task in the current app.",
+    options: [
+      { value: 1, label: "None of them" },
+      { value: 2, label: "One" },
+      { value: 3, label: "Two or three" },
+      { value: 4, label: "Four" },
+      { value: 5, label: "All five" }
+    ] },
+
+  // ---------- Risk, Compliance & Operations Automation ----------
+  { id: "r1", dimension: "Risk, Compliance & Operations Automation",
+    text: "How does a standard consumer loan application move from intake to decision?",
+    evidence: "Walk one recent application through the process.",
+    options: [
+      { value: 1, label: "Paper or PDF files are passed between staff" },
+      { value: 2, label: "Workflow software tracks it, but staff re-key data between systems" },
+      { value: 3, label: "Documents are taken in digitally, and data moves between systems without re-keying" },
+      { value: 4, label: "As in the previous option, and cycle time and exception rates are measured" },
+      { value: 5, label: "Standard applications are decided straight through, people review exceptions only, and the exception rate has fallen over the past year" }
+    ] },
+  { id: "r2", dimension: "Risk, Compliance & Operations Automation",
+    text: "How are financial statements from small business loan applicants entered for credit analysis? If the bank doesn't make small business loans, answer for the income documents used in consumer lending.",
+    evidence: "The spreading or document intake tool used, and a recent credit file.",
+    options: [
+      { value: 1, label: "Typed by hand from paper or PDF into spreadsheets" },
+      { value: 2, label: "Typed by hand into a dedicated spreading or loan system" },
+      { value: 3, label: "Extracted by software, then checked line by line by staff" },
+      { value: 4, label: "Extracted by software; staff review only the items it flags" },
+      { value: 5, label: "As in the previous option, and the figures feed straight into the credit model or memo, with extraction accuracy tracked" }
+    ] },
+  { id: "r3", dimension: "Risk, Compliance & Operations Automation",
+    text: "How are AML alerts investigated?",
+    evidence: "The case management system and the latest monthly BSA/AML report.",
+    options: [
+      { value: 1, label: "From printed or exported reports, without case management software" },
+      { value: 2, label: "In case management software, but investigators gather customer and transaction data from several systems by hand" },
+      { value: 3, label: "Case management software fills in customer and transaction data automatically" },
+      { value: 4, label: "As in the previous option, and alerts are risk-scored so investigators work the highest-risk ones first" },
+      { value: 5, label: "As in the previous option, and false-positive rate and investigation time are reported monthly and used to tune rules at least quarterly" }
+    ] },
+  { id: "r4", dimension: "Risk, Compliance & Operations Automation",
+    text: "Which operations metrics for account opening and lending are reported to management at least monthly?",
+    evidence: "The latest monthly operations report.",
+    options: [
+      { value: 1, label: "None" },
+      { value: 2, label: "Volumes only" },
+      { value: 3, label: "Volumes and turnaround time" },
+      { value: 4, label: "Volumes, turnaround time, and error or exception rates by process step" },
+      { value: 5, label: "All of the above, plus cost per transaction, each with a target" }
+    ] },
+
+  // ---------- AI-Driven Decisioning ----------
+  { id: "a1", dimension: "AI-Driven Decisioning",
+    text: "How many statistical or machine learning models does the bank govern itself that make or inform live credit, fraud or marketing decisions?",
+    evidence: "The model inventory, or a list from the model owners.",
+    options: [
+      { value: 1, label: "None; decisions follow fixed rules or individual judgment" },
+      { value: 2, label: "None of its own; it uses only vendor scores as delivered" },
+      { value: 3, label: "One or two" },
+      { value: 4, label: "Three to nine" },
+      { value: 5, label: "Ten or more, covering at least two of credit, fraud and marketing" }
+    ] },
+  { id: "a2", dimension: "AI-Driven Decisioning",
+    text: "Which model risk management practices are documented and in use?",
+    evidence: "The model risk policy and the latest validation report.",
+    options: [
+      { value: 1, label: "None" },
+      { value: 2, label: "A list of models exists, but there is no validation process" },
+      { value: 3, label: "An inventory with owners, and independent validation before each model goes live" },
+      { value: 4, label: "As in the previous option, and models are revalidated on a fixed schedule" },
+      { value: 5, label: "As in the previous option, and model performance is monitored automatically with alert thresholds" }
+    ] },
+  { id: "a3", dimension: "AI-Driven Decisioning",
+    text: "How is generative AI used in the bank today? (Rubric version: November 2026. This question is re-calibrated first at each refresh.)",
+    evidence: "The AI use policy and the generative AI use case inventory.",
+    options: [
+      { value: 1, label: "It is not permitted, or there is no policy on it" },
+      { value: 2, label: "A policy exists; use is limited to individual pilots" },
+      { value: 3, label: "An approved tool is available to a defined group of employees, and usage is tracked" },
+      { value: 4, label: "At least one use case runs in a live business process (such as call summarization) with a measured outcome" },
+      { value: 5, label: "Several live use cases, listed in an inventory, with output quality monitored" }
+    ] },
+  { id: "a4", dimension: "AI-Driven Decisioning",
+    text: "How is the business impact of models and AI use cases reported?",
+    evidence: "The most recent report showing model or AI results.",
+    options: [
+      { value: 1, label: "It is not measured, or there are no models" },
+      { value: 2, label: "It is estimated once, in the business case" },
+      { value: 3, label: "It is measured after launch against a baseline" },
+      { value: 4, label: "As in the previous option, and it is tracked in a recurring management report" },
+      { value: 5, label: "As in the previous option, and it is reported to the board or a board committee at least yearly" }
+    ] },
+
+  // ---------- Workforce & Change Capacity ----------
+  { id: "w1", dimension: "Workforce & Change Capacity",
+    text: "How are analytics and data science staff organized?",
+    evidence: "The org chart and job descriptions.",
+    options: [
+      { value: 1, label: "There are no dedicated analytics roles" },
+      { value: 2, label: "A few analysts sit inside individual departments" },
+      { value: 3, label: "A named analytics team serves the whole bank" },
+      { value: 4, label: "A named team plus analysts embedded in business lines, working to shared standards" },
+      { value: 5, label: "As in the previous option, plus defined analytics career paths with promotion criteria" }
+    ] },
+  { id: "w2", dimension: "Workforce & Change Capacity",
+    text: "For the most recent new tool rolled out to frontline staff, what training happened before launch?",
+    evidence: "The launch plan and training completion records for that tool.",
+    options: [
+      { value: 1, label: "No training plan" },
+      { value: 2, label: "Optional training was available" },
+      { value: 3, label: "Frontline staff had to complete training before launch" },
+      { value: 4, label: "As in the previous option, and managers were trained before their teams" },
+      { value: 5, label: "As in the previous option, and each team had a named champion before launch" }
+    ] },
+  { id: "w3", dimension: "Workforce & Change Capacity",
+    text: "How is adoption of a new tool measured after launch?",
+    evidence: "The adoption report for the most recent launch.",
+    options: [
+      { value: 1, label: "It is not measured" },
+      { value: 2, label: "By license counts or anecdotes only" },
+      { value: 3, label: "Usage is measured for the first few weeks after launch" },
+      { value: 4, label: "Weekly active users are tracked on an ongoing basis and reported to managers" },
+      { value: 5, label: "As in the previous option, and adoption targets are in managers' goals and reviewed by leadership each quarter" }
+    ] },
+  { id: "w4", dimension: "Workforce & Change Capacity",
+    text: "What share of employees completed data or AI skills training in the last 12 months?",
+    evidence: "Learning system completion report.",
+    options: [
+      { value: 1, label: "No such training is offered" },
+      { value: 2, label: "Training is offered, but completion is not tracked" },
+      { value: 3, label: "Less than 25%" },
+      { value: 4, label: "25% to 74%" },
+      { value: 5, label: "75% or more" }
+    ] }
+];
+
+/* =====================================================================
+   TEST PERSONAS (Phase 3, developer only; shown with #test in the URL).
+   `fill` is the answer a persona gives to every question in each dimension;
+   `answers` overrides single questions. Order: Data, Channels, Risk/Ops, AI, Workforce.
+   The first four are the test banks from the Interpretation Guide (Tool
+   Format). Bay Coast 2020 is the Stage 2 persona and Stage 4 bank the Stage 4
+   persona (slide 98). Expected results were updated on November 20, 2026 for
+   the five-profile set. The rest are extra coverage cases so every profile,
+   each rule and the lowest-dimension path are tested.
+   ===================================================================== */
+const TEST_PERSONAS = [
+  // ---- From the Interpretation Guide ----
+  { name: "Bay Coast 2020", fill: [1, 2, 2, 1, 2],
+    expectedScores: [1, 2, 2, 1, 2], expectedStages: [1, 2, 2, 1, 2],
+    expectedPrimary: "Siloed Ledger", expectedAlso: ["Digitized but Not Deciding"], expectedImbalance: null,
+    expectedEven: false,
+    expectedLowest: ["Customer Data Foundation", "AI-Driven Decisioning"] },
+  { name: "Bay Coast 2025", fill: [3, 4, 2, 3, 3],
+    expectedScores: [3, 4, 2, 3, 3], expectedStages: [3, 4, 2, 3, 3],
+    expectedPrimary: "Manual Back Office", expectedAlso: [], expectedImbalance: "Digital Banking Channels",
+    expectedLowest: ["Risk, Compliance & Operations Automation", "Customer Data Foundation"] },
+  { name: "Gulfstream 2025", fill: [2, 2, 4, 2, 2],
+    expectedScores: [2, 2, 4, 2, 2], expectedStages: [2, 2, 4, 2, 2],
+    expectedPrimary: "Siloed Ledger", expectedAlso: ["Tools Without Takers", "Digitized but Not Deciding", "Branch-Bound"],
+    expectedImbalance: "Risk, Compliance & Operations Automation",
+    expectedLowest: ["Customer Data Foundation", "Workforce & Change Capacity"] },
+  { name: "Stage 4 bank", fill: [4, 4, 4, 4, 4],
+    expectedScores: [4, 4, 4, 4, 4], expectedStages: [4, 4, 4, 4, 4],
+    expectedPrimary: "Siloed Ledger",
+    expectedAlso: ["Tools Without Takers", "Digitized but Not Deciding", "Branch-Bound", "Manual Back Office"],
+    expectedImbalance: null, expectedEven: true,
+    expectedLowest: ["Customer Data Foundation", "Workforce & Change Capacity"] },
+
+  // ---- Extra coverage (Member C) ----
+  { name: "Data gap", fill: [1, 3, 3, 2, 3],
+    expectedScores: [1, 3, 3, 2, 3], expectedStages: [1, 3, 3, 2, 3],
+    expectedPrimary: "Siloed Ledger", expectedAlso: [], expectedImbalance: "Digital Banking Channels" },
+  { name: "People gap", fill: [3, 3, 3, 3, 1],
+    expectedScores: [3, 3, 3, 3, 1], expectedStages: [3, 3, 3, 3, 1],
+    expectedPrimary: "Tools Without Takers", expectedAlso: [], expectedImbalance: "Customer Data Foundation" },
+  { name: "Digital front, rules behind", fill: [3, 4, 3, 2, 3],
+    expectedScores: [3, 4, 3, 2, 3], expectedStages: [3, 4, 3, 2, 3],
+    expectedPrimary: "Digitized but Not Deciding", expectedAlso: [], expectedImbalance: "Digital Banking Channels" },
+  { name: "AI lowest (fallback)", fill: [3, 3, 3, 2, 3],
+    expectedScores: [3, 3, 3, 2, 3], expectedStages: [3, 3, 3, 2, 3],
+    expectedPrimary: "Digitized but Not Deciding", expectedAlso: [], expectedImbalance: null },
+  { name: "Channels lowest (fallback)", fill: [3, 2, 3, 3, 3],
+    expectedScores: [3, 2, 3, 3, 3], expectedStages: [3, 2, 3, 3, 3],
+    expectedPrimary: "Branch-Bound", expectedAlso: [], expectedImbalance: null },
+  { name: "Three-way tie (fallback)", fill: [3, 2, 3, 2, 2],
+    expectedScores: [3, 2, 3, 2, 2], expectedStages: [3, 2, 3, 2, 2],
+    expectedPrimary: "Tools Without Takers", expectedAlso: ["Digitized but Not Deciding", "Branch-Bound"], expectedImbalance: null },
+  { name: "Nearly even bank (0.5 spread)", fill: [3, 3, 3, 3, 3], answers: { d4: 1 },
+    expectedScores: [2.5, 3, 3, 3, 3], expectedStages: [2, 3, 3, 3, 3],
+    expectedPrimary: "Siloed Ledger", expectedAlso: [], expectedImbalance: null, expectedEven: true },
+  { name: "Uneven bank", fill: [3, 4, 2, 1, 3], answers: { d4: 2, c4: 5 },
+    expectedScores: [2.75, 4.25, 2, 1, 3], expectedStages: [2, 4, 2, 1, 3],
+    expectedPrimary: "Digitized but Not Deciding", expectedAlso: [], expectedImbalance: "Digital Banking Channels",
+    expectedLowest: ["AI-Driven Decisioning", "Risk, Compliance & Operations Automation"] }
+];
+
+/* =====================================================================
+   LOGIC (Member C). Nothing below should need editing when data changes.
+   ===================================================================== */
+
+function validateConfig() {
+  const errors = [];
+  if (DIMENSIONS.length !== 5) errors.push(`Expected 5 dimensions, found ${DIMENSIONS.length}.`);
+  if (STAGE_NAMES.length !== 5) errors.push(`Expected 5 stage names, found ${STAGE_NAMES.length}.`);
+  const ids = new Set();
+  QUESTIONS.forEach(q => {
+    if (ids.has(q.id)) errors.push(`Duplicate question id "${q.id}".`);
+    ids.add(q.id);
+    if (!DIMENSIONS.includes(q.dimension)) errors.push(`Question ${q.id} uses unknown dimension "${q.dimension}".`);
+    q.options.forEach(o => {
+      if (!Number.isInteger(o.value) || o.value < 1 || o.value > 5)
+        errors.push(`Question ${q.id} has an option value that is not an integer from 1 to 5.`);
+    });
+  });
+  DIMENSIONS.forEach(d => {
+    if (!QUESTIONS.some(q => q.dimension === d)) errors.push(`Dimension "${d}" has no questions.`);
+    if (!STAGE_DESCRIPTIONS[d] || STAGE_DESCRIPTIONS[d].length !== 5)
+      errors.push(`Dimension "${d}" needs exactly 5 stage descriptions.`);
+  });
+  Object.keys(STAGE_DESCRIPTIONS).forEach(d => {
+    if (!DIMENSIONS.includes(d)) errors.push(`Stage descriptions use unknown dimension "${d}".`);
+  });
+  if (PROFILES.length && PROFILES.length !== 5)
+    errors.push(`The Interpretation Guide calls for five named profiles (slide 104); found ${PROFILES.length}.`);
+  if (PROFILES.length) {
+    const names = new Set();
+    PROFILES.forEach(p => {
+      if (names.has(p.name)) errors.push(`Duplicate profile name "${p.name}".`);
+      names.add(p.name);
+      if (!p.rule && !p.fallbackFor) errors.push(`Profile "${p.name}" has neither a rule nor a fallback dimension.`);
+      if (p.fallbackFor && !DIMENSIONS.includes(p.fallbackFor))
+        errors.push(`Profile "${p.name}" falls back on unknown dimension "${p.fallbackFor}".`);
+      if (p.rule) {
+        if (!RULE_TYPES.includes(p.rule.type)) errors.push(`Profile "${p.name}" has unknown rule type "${p.rule.type}".`);
+        [p.rule.dimension, p.rule.high, p.rule.low].filter(Boolean).forEach(d => {
+          if (!DIMENSIONS.includes(d)) errors.push(`Profile "${p.name}" rule uses unknown dimension "${d}".`);
+        });
+      }
+    });
+    DIMENSIONS.forEach(d => {
+      const n = PROFILES.filter(p => p.fallbackFor === d).length;
+      if (n !== 1) errors.push(`Dimension "${d}" needs exactly one fallback profile, found ${n}.`);
+      if (!PRIORITY.includes(d)) errors.push(`Dimension "${d}" is missing from PRIORITY.`);
+    });
+  }
+  return errors;
+}
+
+// answers: { questionId: integer 1..5 } -> array of dimension averages, in DIMENSIONS order
+function scoreDimensions(answers) {
+  return DIMENSIONS.map(dim => {
+    const values = QUESTIONS.filter(q => q.dimension === dim).map(q => answers[q.id]);
+    return values.reduce((a, b) => a + b, 0) / values.length;
+  });
+}
+
+// A bank is at a stage once its average reaches it: 2.75 reads as Stage 2.
+function stageFor(score) {
+  return Math.min(5, Math.max(1, Math.floor(score + 1e-9)));
+}
+
+const EPS = 1e-9; // scores are averages, so compare with a tiny tolerance
+const RULE_TYPES = ["allAtLeast", "allAtMost", "belowAllOthers", "highAndLow"];
+const scoreOf = (scores, dim) => scores[DIMENSIONS.indexOf(dim)];
+const fmt = n => Number(n).toFixed(1);
+
+function ruleMatches(rule, scores) {
+  switch (rule.type) {
+    case "allAtLeast": return scores.every(s => s >= rule.value - EPS);
+    case "allAtMost": return scores.every(s => s <= rule.value + EPS);
+    case "belowAllOthers": {
+      const own = scoreOf(scores, rule.dimension);
+      return DIMENSIONS.every((d, i) => d === rule.dimension || scores[i] - own >= rule.gap - EPS);
+    }
+    case "highAndLow":
+      return scoreOf(scores, rule.high) >= rule.highMin - EPS && scoreOf(scores, rule.low) <= rule.lowMax + EPS;
+    default: return false;
+  }
+}
+
+function describeRule(rule) {
+  switch (rule.type) {
+    case "allAtLeast": return `every dimension scores ${fmt(rule.value)} or higher.`;
+    case "allAtMost": return `every dimension scores ${fmt(rule.value)} or lower.`;
+    case "belowAllOthers": return `${rule.dimension} is at least ${fmt(rule.gap)} below every other dimension.`;
+    case "highAndLow": return `${rule.high} is ${fmt(rule.highMin)} or higher while ${rule.low} is ${fmt(rule.lowMax)} or lower.`;
+    default: return "";
+  }
+}
+
+// scores -> { primary, also, reason, imbalance, imbalanceMessage } or null while no profiles are defined.
+// 1. Profiles with a rule are checked in listed order; the first match is primary.
+// 2. Otherwise the profile whose fallbackFor is the lowest dimension is primary; ties are
+//    ordered by PRIORITY and the other tied profiles are shown as also applying.
+function interpret(scores) {
+  if (!PROFILES.length) return null;
+  const min = Math.min(...scores);
+  const max = Math.max(...scores);
+  const strongest = DIMENSIONS[scores.indexOf(max)];
+  const imbalanced = typeof IMBALANCE_GAP === "number" && max - min >= IMBALANCE_GAP - EPS;
+  const base = {
+    imbalance: imbalanced ? strongest : null,
+    imbalanceMessage: imbalanced ? imbalanceMessage(strongest) : null
+  };
+
+  const matched = PROFILES.find(p => p.rule && ruleMatches(p.rule, scores));
+  if (matched) {
+    return { ...base, primary: matched, also: [], reason: "Pattern matched: " + describeRule(matched.rule), even: false, min, max };
+  }
+
+  const tied = DIMENSIONS.filter((d, i) => scores[i] - min <= TIE_TOLERANCE + EPS);
+  const rank = d => (PRIORITY.includes(d) ? PRIORITY.indexOf(d) : PRIORITY.length + DIMENSIONS.indexOf(d));
+  tied.sort((a, b) => rank(a) - rank(b));
+  const profileFor = dim => PROFILES.find(p => p.fallbackFor === dim);
+  const reason = tied.length > 1
+    ? `No pattern matched. ${tied.join(", ")} tie for lowest at ${min.toFixed(2)}; ${tied[0]} comes first in the tie-break order.`
+    : `No pattern matched, so the profile follows your lowest dimension: ${tied[0]} (${min.toFixed(2)}).`;
+  const even = max - min <= EVEN_SPREAD + EPS;
+  return { ...base, primary: profileFor(tied[0]), also: tied.slice(1).map(profileFor), reason, even, min, max };
+}
+
+// Small helper for building elements; text always goes in as textContent.
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+function buildQuestions() {
+  const container = document.getElementById("questions");
+  const pills = document.getElementById("pills");
+  let number = 0;
+  DIMENSIONS.forEach((dim, di) => {
+    const section = el("section", "dimension");
+    section.id = "dim-" + di;
+
+    const head = el("div", "dim-head");
+    const body = el("div");
+    const title = el("div", "dim-title");
+    const count = el("span", "dim-count");
+    count.id = "count-" + di;
+    title.append(el("h2", null, dim), count);
+    body.append(title, el("p", "dimension-desc", DIMENSION_DESCRIPTIONS[dim] || ""));
+    head.append(el("div", "dim-num", String(di + 1).padStart(2, "0")), body);
+    section.append(head);
+
+    const pill = el("a", "pill");
+    pill.href = "#dim-" + di;
+    pill.id = "pill-" + di;
+    pill.append(el("span", null, dim), el("span", "pill-count"));
+    pills.append(pill);
+
+    QUESTIONS.filter(q => q.dimension === dim).forEach(q => {
+      number++;
+      const fs = el("fieldset", "question");
+      fs.id = "fs-" + q.id;
+      const legend = el("legend");
+      legend.append(el("span", "q-num", `Question ${number} of ${QUESTIONS.length}`), document.createTextNode(q.text));
+      fs.append(legend);
+      if (q.evidence) {
+        const ev = el("p", "evidence");
+        ev.append(el("strong", null, "What to check: "), document.createTextNode(q.evidence));
+        fs.append(ev);
+      }
+      const options = el("div", "options");
+      q.options.forEach(o => {
+        const label = el("label", "option");
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = q.id;
+        input.value = String(o.value);
+        label.append(input, el("span", "opt-badge", String(o.value)), el("span", "opt-text", o.label));
+        options.append(label);
+      });
+      fs.append(options);
+      section.append(fs);
+    });
+    container.append(section);
+  });
+}
+
+function readAnswers() {
+  const answers = {};
+  QUESTIONS.forEach(q => {
+    const checked = document.querySelector(`input[name="${q.id}"]:checked`);
+    if (checked) answers[q.id] = parseInt(checked.value, 10);
+  });
+  return answers;
+}
+
+function updateProgress() {
+  const answers = readAnswers();
+  const answered = Object.keys(answers).length;
+  document.getElementById("progress").textContent = `${answered} of ${QUESTIONS.length} answered`;
+  document.getElementById("progress-fill").style.width = `${(answered / QUESTIONS.length) * 100}%`;
+  DIMENSIONS.forEach((dim, di) => {
+    const qs = QUESTIONS.filter(q => q.dimension === dim);
+    const done = qs.filter(q => q.id in answers).length;
+    document.getElementById("count-" + di).textContent = `${done} of ${qs.length} answered`;
+    const pill = document.getElementById("pill-" + di);
+    pill.querySelector(".pill-count").textContent = `${done}/${qs.length}`;
+    pill.classList.toggle("complete", done === qs.length);
+  });
+  // Clear the red outline as soon as a flagged question gets an answer.
+  QUESTIONS.forEach(q => {
+    if (q.id in answers) document.getElementById("fs-" + q.id).classList.remove("missing");
+  });
+}
+
+let chart = null;
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// Phones get smaller, tighter-wrapped axis labels so they fit inside the canvas.
+const isNarrow = () => window.innerWidth < 560;
+
+function renderChart(scores) {
+  const ctx = document.getElementById("radar");
+  const note = document.getElementById("chart-unavailable");
+  if (typeof Chart === "undefined") {
+    // Chart.js comes from the cdnjs CDN; without a connection, keep the results usable.
+    ctx.hidden = true;
+    note.hidden = false;
+    return;
+  }
+  ctx.hidden = false;
+  note.hidden = true;
+  if (chart) chart.destroy();
+  Chart.defaults.font.family = cssVar("--font");
+  const grid = cssVar("--border"), text = cssVar("--text"), muted = cssVar("--muted");
+  chart = new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels: DIMENSIONS,
+      datasets: [{
+        label: "Your bank",
+        data: scores,
+        backgroundColor: cssVar("--accent-soft"),
+        borderColor: cssVar("--accent"),
+        pointBackgroundColor: cssVar("--accent"),
+        pointBorderColor: cssVar("--surface"),
+        pointRadius: 4,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      layout: { padding: { left: 4, right: 4 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => `Score: ${c.parsed.r.toFixed(2)}` } }
+      },
+      scales: {
+        r: {
+          min: 0, max: 5,
+          ticks: { stepSize: 1, color: muted, backdropColor: "transparent", font: { size: 10 } },
+          grid: { color: grid },
+          angleLines: { color: grid },
+          pointLabels: {
+            color: text,
+            font: () => ({ size: isNarrow() ? 10 : 12, weight: "600" }),
+            callback: label => wrapLabel(label, isNarrow() ? 12 : 18)
+          }
+        }
+      }
+    }
+  });
+}
+
+function wrapLabel(label, width) {
+  const words = label.split(" ");
+  const lines = [];
+  let line = "";
+  words.forEach(w => {
+    if ((line + " " + w).trim().length > width && line) { lines.push(line); line = w; }
+    else line = (line + " " + w).trim();
+  });
+  if (line) lines.push(line);
+  return lines;
+}
+
+function stageLabel(stage) {
+  return `Stage ${stage}, ${STAGE_NAMES[stage - 1]}`;
+}
+
+function renderResults(scores) {
+  // Score bars
+  const rows = document.getElementById("score-rows");
+  rows.replaceChildren();
+  DIMENSIONS.forEach((d, i) => {
+    const row = el("div", "score-row");
+    const top = el("div", "score-top");
+    const val = el("span", "score-val", scores[i].toFixed(2));
+    val.append(el("small", null, " / 5"));
+    top.append(el("span", "score-name", d), val);
+    const bar = el("div", "bar");
+    const fill = el("span");
+    fill.style.width = `${(scores[i] / 5) * 100}%`;
+    bar.append(fill);
+    row.append(top, bar, el("div", "score-stage", stageLabel(stageFor(scores[i]))));
+    rows.append(row);
+  });
+
+  // Stage descriptions from the framework
+  const grid = document.getElementById("stage-card");
+  grid.replaceChildren();
+  DIMENSIONS.forEach((d, i) => {
+    const stage = stageFor(scores[i]);
+    const block = el("div", "stage-block");
+    block.append(el("h4", null, d), el("span", "chip", stageLabel(stage)), el("p", null, STAGE_DESCRIPTIONS[d][stage - 1]));
+    if (stage < 5) {
+      const next = el("p", "stage-next");
+      next.append(el("b", null, `To reach ${stageLabel(stage + 1)}: `), document.createTextNode(STAGE_DESCRIPTIONS[d][stage]));
+      block.append(next);
+    }
+    grid.append(block);
+  });
+
+  // Interpretation profile
+  const card = document.getElementById("profile-card");
+  card.replaceChildren(el("div", "eyebrow", "Interpretation profile"));
+  const result = interpret(scores);
+  if (!result) {
+    card.append(el("p", "muted", "Pending: the named profiles and recommended next actions from the Interpretation Guide have not been added yet."));
+  } else if (result.even) {
+    // Even scores: present the tie-break profile as the next area to strengthen, not as a gap.
+    const name = el("div", "profile-name", result.primary.name);
+    name.append(el("span", "tag", "Next area to strengthen"));
+    const dim = result.primary.fallbackFor;
+    const stage = stageFor(scoreOf(scores, dim));
+    const range = result.min === result.max
+      ? `All five dimensions score ${result.min.toFixed(2)}`
+      : `All five dimensions score within ${fmt(EVEN_SPREAD)} of each other (${result.min.toFixed(2)} to ${result.max.toFixed(2)})`;
+    const note = el("div", "even-note");
+    note.append(el("div", "eyebrow", "Even scores"), el("p", null,
+      `${range}, so no single weakness stands out. ${result.primary.name} is shown because ${dim} comes first ` +
+      `in the tie-break order. Read it as the next area to strengthen from where the bank stands, not as a gap.`));
+    const meaning = el("p", "profile-meaning muted");
+    meaning.append(el("strong", null, "When this dimension trails the others: "), document.createTextNode(result.primary.meaning || ""));
+    // The next step comes from the framework's next stage for that dimension, so it fits the bank's level.
+    const action = el("div", "next-action");
+    action.append(el("div", "eyebrow", stage < 5
+      ? `Recommended next action: move ${dim} to ${stageLabel(stage + 1)}`
+      : "Recommended next action"));
+    action.append(el("p", null, stage < 5
+      ? STAGE_DESCRIPTIONS[dim][stage]
+      : "Every dimension is at Stage 5. Keep the improvement routines in place and rerun this assessment each quarter, because what counts as leading keeps moving."));
+    const usual = el("p", "muted even-also");
+    usual.append(el("strong", null, "Usual first step for this profile: "), document.createTextNode(result.primary.nextAction || ""));
+    card.append(name, note, meaning, action, usual);
+    if (result.also.length) {
+      card.append(el("p", "muted even-also", `Also tied: ${result.also.map(p => p.name).join(", ")}.`));
+    }
+  } else {
+    const name = el("div", "profile-name", result.primary.name);
+    if (result.also.length) name.append(el("span", "tag", "Primary"));
+    card.append(name, el("p", "profile-reason", result.reason), el("p", "profile-meaning", result.primary.meaning || ""));
+    const action = el("div", "next-action");
+    action.append(el("div", "eyebrow", "Recommended next action"), el("p", null, result.primary.nextAction || ""));
+    card.append(action);
+    if (result.imbalanceMessage) card.append(el("div", "banner", result.imbalanceMessage));
+  }
+  card.append(lowestBlock(scores));
+  if (result && result.also.length && !result.even) {
+    const also = el("div", "also");
+    also.append(el("div", "eyebrow", "Also applies: these dimensions tied for lowest"));
+    result.also.forEach(p => {
+      const item = el("div", "also-item");
+      const next = el("p");
+      next.append(el("strong", null, "Next action: "), document.createTextNode(p.nextAction || ""));
+      item.append(el("h4", null, p.name), el("p", "muted", `Tied for lowest: ${p.fallbackFor}`), el("p", null, p.meaning || ""), next);
+      also.append(item);
+    });
+    card.append(also);
+  }
+
+  renderChart(scores);
+}
+
+// The two lowest dimensions, lowest first; equal scores are ordered by PRIORITY.
+function twoLowest(scores) {
+  const rank = d => (PRIORITY.includes(d) ? PRIORITY.indexOf(d) : PRIORITY.length + DIMENSIONS.indexOf(d));
+  return DIMENSIONS.map((dim, i) => ({ dim, score: scores[i] }))
+    .sort((a, b) => a.score - b.score || rank(a.dim) - rank(b.dim))
+    .slice(0, 2);
+}
+
+function lowestBlock(scores) {
+  const div = el("div", "lowest");
+  div.append(el("span", "eyebrow", "Two lowest dimensions"));
+  twoLowest(scores).forEach(({ dim, score }) => {
+    const chip = el("span", "chip");
+    chip.append(document.createTextNode(dim + " "), el("b", null, score.toFixed(2)),
+      document.createTextNode(` · ${STAGE_NAMES[stageFor(score) - 1]}`));
+    div.append(chip);
+  });
+  return div;
+}
+
+function handleSubmit(event) {
+  event.preventDefault();
+  const answers = readAnswers();
+  const missing = QUESTIONS.filter(q => !(q.id in answers));
+  document.querySelectorAll("fieldset.question").forEach(fs => fs.classList.remove("missing"));
+  const err = document.getElementById("submit-error");
+  if (missing.length) {
+    missing.forEach(q => document.getElementById("fs-" + q.id).classList.add("missing"));
+    err.textContent = missing.length === 1
+      ? "1 question still needs an answer."
+      : `${missing.length} questions still need an answer.`;
+    document.getElementById("fs-" + missing[0].id).scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("results").hidden = true;
+    return;
+  }
+  err.textContent = "";
+  document.getElementById("results").hidden = false;
+  renderResults(scoreDimensions(answers));
+  document.getElementById("results").scrollIntoView({ behavior: "smooth" });
+}
+
+/* ---------- Test persona tools (only shown with #test) ---------- */
+function personaAnswers(persona) {
+  const answers = {};
+  QUESTIONS.forEach(q => {
+    answers[q.id] = persona.answers && persona.answers[q.id] != null
+      ? persona.answers[q.id]
+      : persona.fill[DIMENSIONS.indexOf(q.dimension)];
+  });
+  return answers;
+}
+
+function fillPersona(persona) {
+  const answers = personaAnswers(persona);
+  QUESTIONS.forEach(q => {
+    const input = document.querySelector(`input[name="${q.id}"][value="${answers[q.id]}"]`);
+    if (input) input.checked = true;
+  });
+  updateProgress();
+}
+
+function runChecks() {
+  const lines = TEST_PERSONAS.map(p => {
+    const scores = scoreDimensions(personaAnswers(p));
+    const problems = [];
+    scores.forEach((s, i) => {
+      if (Math.abs(s - p.expectedScores[i]) > 1e-9)
+        problems.push(`${DIMENSIONS[i]} scored ${s.toFixed(2)}, expected ${p.expectedScores[i]}`);
+      if (p.expectedStages && stageFor(s) !== p.expectedStages[i])
+        problems.push(`${DIMENSIONS[i]} read as Stage ${stageFor(s)}, expected Stage ${p.expectedStages[i]}`);
+    });
+    const r = interpret(scores);
+    if (r && p.expectedPrimary !== undefined) {
+      if (r.primary.name !== p.expectedPrimary) problems.push(`primary ${r.primary.name}, expected ${p.expectedPrimary}`);
+      const also = r.also.map(x => x.name).join(", "), expAlso = (p.expectedAlso || []).join(", ");
+      if (also !== expAlso) problems.push(`also "${also}", expected "${expAlso}"`);
+      if (r.imbalance !== (p.expectedImbalance ?? null)) problems.push(`imbalance ${r.imbalance}, expected ${p.expectedImbalance}`);
+      if (p.expectedEven !== undefined && r.even !== p.expectedEven) problems.push(`even ${r.even}, expected ${p.expectedEven}`);
+    }
+    if (p.expectedLowest) {
+      const low = twoLowest(scores).map(x => x.dim).join(", "), expLow = p.expectedLowest.join(", ");
+      if (low !== expLow) problems.push(`two lowest "${low}", expected "${expLow}"`);
+    }
+    const summary = scores.map(s => stageFor(s)).join("/");
+    return problems.length ? `FAIL ${p.name}: ${problems.join("; ")}` : `PASS ${p.name}: stages ${summary}`;
+  });
+  document.getElementById("test-log").textContent = lines.join("\n");
+  return lines;
+}
+
+function setupTestPanel() {
+  if (location.hash !== "#test") return;
+  document.getElementById("test-panel").hidden = false;
+  const box = document.getElementById("test-buttons");
+  TEST_PERSONAS.forEach(p => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "secondary";
+    b.textContent = `Fill as ${p.name}`;
+    b.addEventListener("click", () => fillPersona(p));
+    box.append(b);
+  });
+  document.getElementById("run-checks").addEventListener("click", runChecks);
+}
+
+/* ---------- Start ---------- */
+const configErrors = validateConfig();
+if (configErrors.length) {
+  const box = document.getElementById("config-errors");
+  box.hidden = false;
+  box.textContent = "Data problem: " + configErrors.join(" ");
+}
+document.getElementById("meta").append(
+  el("span", null, `${QUESTIONS.length} questions`),
+  el("span", null, `${DIMENSIONS.length} dimensions`),
+  el("span", null, `About ${Math.max(5, Math.round(QUESTIONS.length / 2))} minutes`),
+  el("span", null, "Rubric version: November 2026")
+);
+buildQuestions();
+updateProgress();
+setupTestPanel();
+document.getElementById("assessment").addEventListener("change", updateProgress);
+document.getElementById("assessment").addEventListener("submit", handleSubmit);
+document.getElementById("edit-answers").addEventListener("click", () => {
+  document.getElementById("results").hidden = true;
+  document.getElementById("dim-0").scrollIntoView({ behavior: "smooth" });
+});
+document.getElementById("print-results").addEventListener("click", () => window.print());
+</script>
+</body>
+</html>
